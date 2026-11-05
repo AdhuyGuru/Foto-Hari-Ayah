@@ -21,6 +21,18 @@
 </head>
 <body class="bg-gradient-to-br from-blue-100 via-white to-yellow-100 min-h-screen text-gray-800">
 
+    <!-- Modal Notifikasi Baru yang Cantik -->
+    <div id="notifModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform scale-100">
+            <div id="notifIcon" class="text-5xl mb-4">⚠️</div>
+            <h3 id="notifTitle" class="text-xl font-extrabold text-blue-900 mb-2">Informasi</h3>
+            <p id="notifMsg" class="text-sm text-gray-600 mb-6 font-semibold">Pesan di sini</p>
+            <button onclick="tutupNotif()" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg">
+                Mengerti
+            </button>
+        </div>
+    </div>
+
     <div class="max-w-md mx-auto min-h-screen p-4 flex flex-col items-center justify-center">
         
         <!-- Header & Logo -->
@@ -83,6 +95,9 @@
                 <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-lg py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition active:translate-y-0 mt-4 disabled:opacity-70 disabled:cursor-not-allowed">
                     Kirim Foto Kita! 🚀
                 </button>
+                
+                <!-- Area Teks Error Tambahan (Di Bawah Tombol) -->
+                <p id="errorText" class="hidden text-xs text-red-600 font-bold text-center mt-3 bg-red-50 p-3 rounded-xl border border-red-200"></p>
             </form>
 
             <!-- Status Uploading -->
@@ -114,7 +129,7 @@
         // ==========================================
         // KAWAN, MASUKKAN URL GOOGLE APPS SCRIPT DI BAWAH INI:
         // ==========================================
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxF4J-C-ehnmRBJ97QsaWhNXbl-hfAXxbt7BwqSN1D_MS-tpbD1NvCkXb9cQoYfX0LT/exec'; 
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzkMiZlskaxpzAB49w9XPMMThXzVeK1HnfTpjjNKvhEjydBu5j9rwW2vSOLNASS18Ou/exec'; 
         
         let studentsData = []; // Akan diisi data dari spreadsheet
         let compressedImageBase64 = null;
@@ -132,11 +147,26 @@
         const uploadingState = document.getElementById('uploadingState');
         const successState = document.getElementById('successState');
         const finalImage = document.getElementById('finalImage');
+        
+        // Element Notifikasi Baru
+        const notifModal = document.getElementById('notifModal');
+        const notifMsg = document.getElementById('notifMsg');
+        const errorText = document.getElementById('errorText');
+
+        // Fungsi Memunculkan & Menutup Notifikasi
+        function tampilkanNotif(pesan) {
+            notifMsg.textContent = pesan;
+            notifModal.classList.remove('hidden');
+        }
+
+        function tutupNotif() {
+            notifModal.classList.add('hidden');
+        }
 
         // 1. Ambil data siswa saat halaman dimuat
         window.onload = async () => {
             if (SCRIPT_URL === 'MASUKKAN_URL_WEB_APP_DISINI') {
-                alert("Peringatan: URL Apps Script belum diisi di dalam kode HTML. Silakan edit file index.html terlebih dahulu.");
+                tampilkanNotif("URL Apps Script belum diisi di dalam kode HTML. Silakan edit file index.html terlebih dahulu.");
                 initLoader.innerHTML = "<p class='text-red-500 font-bold text-center'>Sistem belum siap.<br>Hubungi Panitia.</p>";
                 return;
             }
@@ -244,9 +274,10 @@
         // 4. Submit Form
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            errorText.classList.add('hidden');
             
             if (!compressedImageBase64) {
-                alert("Silakan tunggu sebentar, foto sedang diproses...");
+                tampilkanNotif("Silakan tunggu sebentar, foto sedang diproses sebelum dikirim...");
                 return;
             }
 
@@ -275,11 +306,17 @@
                     successState.classList.remove('hidden');
                     finalImage.src = "data:image/jpeg;base64," + compressedImageBase64;
                 } else {
-                    throw new Error(result.error || "Gagal mengunggah");
+                    throw new Error(result.error || "Gagal mengunggah dari sisi server.");
                 }
             } catch (error) {
                 console.error(error);
-                alert("Terjadi kesalahan saat mengunggah foto. Silakan coba lagi.");
+                let pesanError = "Terjadi kesalahan: " + error.message;
+                
+                // Tampilkan pesan error di bawah tombol dan di modal popup
+                errorText.textContent = pesanError;
+                errorText.classList.remove('hidden');
+                tampilkanNotif("Gagal Mengunggah. " + pesanError);
+                
                 uploadingState.classList.add('hidden');
                 uploadForm.classList.remove('hidden');
             }
